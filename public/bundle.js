@@ -49,6 +49,10 @@ var app = (function () {
     function space() {
         return text(' ');
     }
+    function listen(node, event, handler, options) {
+        node.addEventListener(event, handler, options);
+        return () => node.removeEventListener(event, handler, options);
+    }
     function attr(node, attribute, value) {
         if (value == null)
             node.removeAttribute(attribute);
@@ -57,6 +61,11 @@ var app = (function () {
     }
     function children(element) {
         return Array.from(element.childNodes);
+    }
+    function set_input_value(input, value) {
+        if (value != null || input.value) {
+            input.value = value;
+        }
     }
     function custom_event(type, detail) {
         const e = document.createEvent('CustomEvent');
@@ -76,6 +85,20 @@ var app = (function () {
     function onMount(fn) {
         get_current_component().$$.on_mount.push(fn);
     }
+    function createEventDispatcher() {
+        const component = current_component;
+        return (type, detail) => {
+            const callbacks = component.$$.callbacks[type];
+            if (callbacks) {
+                // TODO are there situations where events could be dispatched
+                // in a server (non-DOM) environment?
+                const event = custom_event(type, detail);
+                callbacks.slice().forEach(fn => {
+                    fn.call(component, event);
+                });
+            }
+        };
+    }
 
     const dirty_components = [];
     const binding_callbacks = [];
@@ -91,6 +114,9 @@ var app = (function () {
     }
     function add_render_callback(fn) {
         render_callbacks.push(fn);
+    }
+    function add_flush_callback(fn) {
+        flush_callbacks.push(fn);
     }
     function flush() {
         const seen_callbacks = new Set();
@@ -154,6 +180,13 @@ var app = (function () {
             });
             block.o(local);
         }
+    }
+
+    function bind(component, name, callback) {
+        if (component.$$.props.indexOf(name) === -1)
+            return;
+        component.$$.bound[name] = callback;
+        callback(component.$$.ctx[name]);
     }
     function mount_component(component, target, anchor) {
         const { fragment, on_mount, on_destroy, after_update } = component.$$;
@@ -278,6 +311,19 @@ var app = (function () {
     function detach_dev(node) {
         dispatch_dev("SvelteDOMRemove", { node });
         detach(node);
+    }
+    function listen_dev(node, event, handler, options, has_prevent_default, has_stop_propagation) {
+        const modifiers = options === true ? ["capture"] : options ? Array.from(Object.keys(options)) : [];
+        if (has_prevent_default)
+            modifiers.push('preventDefault');
+        if (has_stop_propagation)
+            modifiers.push('stopPropagation');
+        dispatch_dev("SvelteDOMAddEventListener", { node, event, handler, modifiers });
+        const dispose = listen(node, event, handler, options);
+        return () => {
+            dispatch_dev("SvelteDOMRemoveEventListener", { node, event, handler, modifiers });
+            dispose();
+        };
     }
     function attr_dev(node, attribute, value) {
         attr(node, attribute, value);
@@ -570,19 +616,65 @@ var app = (function () {
 
     const file$1 = "src/ArtistSearch.svelte";
 
-    function create_fragment$1(ctx) {
-    	var h4, t0, small, t1, t2;
+    // (12:8) {#if searchTerm}
+    function create_if_block(ctx) {
+    	var t;
 
     	const block = {
     		c: function create() {
+    			t = text("for");
+    		},
+
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+
+    		d: function destroy(detaching) {
+    			if (detaching) {
+    				detach_dev(t);
+    			}
+    		}
+    	};
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_if_block.name, type: "if", source: "(12:8) {#if searchTerm}", ctx });
+    	return block;
+    }
+
+    function create_fragment$1(ctx) {
+    	var div2, div1, h4, t0, small, t1, t2, t3, div0, input, dispose;
+
+    	var if_block = (ctx.searchTerm) && create_if_block(ctx);
+
+    	const block = {
+    		c: function create() {
+    			div2 = element("div");
+    			div1 = element("div");
     			h4 = element("h4");
-    			t0 = text("Search:\n  ");
+    			t0 = text("Search:\n      ");
     			small = element("small");
-    			t1 = text("for: ");
+    			if (if_block) if_block.c();
+    			t1 = space();
     			t2 = text(ctx.searchTerm);
-    			add_location(small, file$1, 6, 2, 83);
-    			attr_dev(h4, "class", "text-primary");
-    			add_location(h4, file$1, 4, 0, 45);
+    			t3 = space();
+    			div0 = element("div");
+    			input = element("input");
+    			add_location(small, file$1, 10, 6, 296);
+    			attr_dev(h4, "class", "mb-1");
+    			add_location(h4, file$1, 8, 4, 258);
+    			attr_dev(input, "type", "text");
+    			attr_dev(input, "class", "form-control");
+    			attr_dev(input, "aria-label", "Search Input");
+    			add_location(input, file$1, 16, 6, 419);
+    			attr_dev(div0, "class", "input-group");
+    			add_location(div0, file$1, 15, 4, 387);
+    			attr_dev(div1, "class", "col-12 col-md-8 col-lg-6 border rounded bg-light p-3");
+    			add_location(div1, file$1, 7, 2, 187);
+    			attr_dev(div2, "class", "row justify-content-center mt-2");
+    			add_location(div2, file$1, 6, 0, 139);
+
+    			dispose = [
+    				listen_dev(input, "input", ctx.input_input_handler),
+    				listen_dev(input, "keyup", ctx.keyup_handler)
+    			];
     		},
 
     		l: function claim(nodes) {
@@ -590,17 +682,38 @@ var app = (function () {
     		},
 
     		m: function mount(target, anchor) {
-    			insert_dev(target, h4, anchor);
+    			insert_dev(target, div2, anchor);
+    			append_dev(div2, div1);
+    			append_dev(div1, h4);
     			append_dev(h4, t0);
     			append_dev(h4, small);
+    			if (if_block) if_block.m(small, null);
     			append_dev(small, t1);
     			append_dev(small, t2);
+    			append_dev(div1, t3);
+    			append_dev(div1, div0);
+    			append_dev(div0, input);
+
+    			set_input_value(input, ctx.searchTerm);
     		},
 
     		p: function update(changed, ctx) {
+    			if (ctx.searchTerm) {
+    				if (!if_block) {
+    					if_block = create_if_block(ctx);
+    					if_block.c();
+    					if_block.m(small, t1);
+    				}
+    			} else if (if_block) {
+    				if_block.d(1);
+    				if_block = null;
+    			}
+
     			if (changed.searchTerm) {
     				set_data_dev(t2, ctx.searchTerm);
     			}
+
+    			if (changed.searchTerm && (input.value !== ctx.searchTerm)) set_input_value(input, ctx.searchTerm);
     		},
 
     		i: noop,
@@ -608,8 +721,11 @@ var app = (function () {
 
     		d: function destroy(detaching) {
     			if (detaching) {
-    				detach_dev(h4);
+    				detach_dev(div2);
     			}
+
+    			if (if_block) if_block.d();
+    			run_all(dispose);
     		}
     	};
     	dispatch_dev("SvelteRegisterBlock", { block, id: create_fragment$1.name, type: "component", source: "", ctx });
@@ -617,12 +733,22 @@ var app = (function () {
     }
 
     function instance$1($$self, $$props, $$invalidate) {
-    	let { searchTerm } = $$props;
+    	const dispatch = createEventDispatcher();
+      let { searchTerm } = $$props;
 
     	const writable_props = ['searchTerm'];
     	Object.keys($$props).forEach(key => {
     		if (!writable_props.includes(key) && !key.startsWith('$$')) console.warn(`<ArtistSearch> was created with unknown prop '${key}'`);
     	});
+
+    	function input_input_handler() {
+    		searchTerm = this.value;
+    		$$invalidate('searchTerm', searchTerm);
+    	}
+
+    	const keyup_handler = () => {
+    	          dispatch('updateSearch');
+    	        };
 
     	$$self.$set = $$props => {
     		if ('searchTerm' in $$props) $$invalidate('searchTerm', searchTerm = $$props.searchTerm);
@@ -636,7 +762,12 @@ var app = (function () {
     		if ('searchTerm' in $$props) $$invalidate('searchTerm', searchTerm = $$props.searchTerm);
     	};
 
-    	return { searchTerm };
+    	return {
+    		dispatch,
+    		searchTerm,
+    		input_input_handler,
+    		keyup_handler
+    	};
     }
 
     class ArtistSearch extends SvelteComponentDev {
@@ -666,17 +797,39 @@ var app = (function () {
     const file$2 = "src/App.svelte";
 
     function create_fragment$2(ctx) {
-    	var div, t, current;
+    	var div, updating_searchTerm, t, updating_artists, current;
 
+    	function artistsearch_searchTerm_binding(value) {
+    		ctx.artistsearch_searchTerm_binding.call(null, value);
+    		updating_searchTerm = true;
+    		add_flush_callback(() => updating_searchTerm = false);
+    	}
+
+    	let artistsearch_props = {};
+    	if (ctx.searchTerm !== void 0) {
+    		artistsearch_props.searchTerm = ctx.searchTerm;
+    	}
     	var artistsearch = new ArtistSearch({
-    		props: { searchTerm: searchTerm },
+    		props: artistsearch_props,
     		$$inline: true
     	});
 
-    	var artistlist = new ArtistList({
-    		props: { artists: ctx.artists },
-    		$$inline: true
-    	});
+    	binding_callbacks.push(() => bind(artistsearch, 'searchTerm', artistsearch_searchTerm_binding));
+    	artistsearch.$on("updateSearch", ctx.updateSearch_handler);
+
+    	function artistlist_artists_binding(value_1) {
+    		ctx.artistlist_artists_binding.call(null, value_1);
+    		updating_artists = true;
+    		add_flush_callback(() => updating_artists = false);
+    	}
+
+    	let artistlist_props = {};
+    	if (ctx.displayList !== void 0) {
+    		artistlist_props.artists = ctx.displayList;
+    	}
+    	var artistlist = new ArtistList({ props: artistlist_props, $$inline: true });
+
+    	binding_callbacks.push(() => bind(artistlist, 'artists', artistlist_artists_binding));
 
     	const block = {
     		c: function create() {
@@ -685,7 +838,7 @@ var app = (function () {
     			t = space();
     			artistlist.$$.fragment.c();
     			attr_dev(div, "class", "container");
-    			add_location(div, file$2, 7160, 0, 216541);
+    			add_location(div, file$2, 7168, 0, 216804);
     		},
 
     		l: function claim(nodes) {
@@ -701,8 +854,16 @@ var app = (function () {
     		},
 
     		p: function update(changed, ctx) {
+    			var artistsearch_changes = {};
+    			if (!updating_searchTerm && changed.searchTerm) {
+    				artistsearch_changes.searchTerm = ctx.searchTerm;
+    			}
+    			artistsearch.$set(artistsearch_changes);
+
     			var artistlist_changes = {};
-    			if (changed.artists) artistlist_changes.artists = ctx.artists;
+    			if (!updating_artists && changed.displayList) {
+    				artistlist_changes.artists = ctx.displayList;
+    			}
     			artistlist.$set(artistlist_changes);
     		},
 
@@ -735,16 +896,39 @@ var app = (function () {
     	return block;
     }
 
-    let searchTerm = "Barot Bellingham";
+    function filterList(list, query) {
+      return list.filter(item => {
+        return (
+          item.name.toLowerCase().match(query.toLowerCase()) ||
+          item.bio.toLowerCase().match(query.toLowerCase())
+        );
+      });
+    }
 
     function instance$2($$self, $$props, $$invalidate) {
     	
+      let searchTerm = "";
       let artists = [];
-
-      onMount( async() => {
-    	  const res = await fetch(`data.json`);
-    	  $$invalidate('artists', artists = await res.json());
+      let displayList = [];
+      onMount(async () => {
+        const res = await fetch(`data.json`);
+        $$invalidate('artists', artists = await res.json());
+        $$invalidate('displayList', displayList = artists);
       });
+
+    	function artistsearch_searchTerm_binding(value) {
+    		searchTerm = value;
+    		$$invalidate('searchTerm', searchTerm);
+    	}
+
+    	const updateSearch_handler = () => {
+    	      $$invalidate('displayList', displayList = filterList(artists, searchTerm));
+    	    };
+
+    	function artistlist_artists_binding(value_1) {
+    		displayList = value_1;
+    		$$invalidate('displayList', displayList);
+    	}
 
     	$$self.$capture_state = () => {
     		return {};
@@ -753,9 +937,17 @@ var app = (function () {
     	$$self.$inject_state = $$props => {
     		if ('searchTerm' in $$props) $$invalidate('searchTerm', searchTerm = $$props.searchTerm);
     		if ('artists' in $$props) $$invalidate('artists', artists = $$props.artists);
+    		if ('displayList' in $$props) $$invalidate('displayList', displayList = $$props.displayList);
     	};
 
-    	return { artists };
+    	return {
+    		searchTerm,
+    		artists,
+    		displayList,
+    		artistsearch_searchTerm_binding,
+    		updateSearch_handler,
+    		artistlist_artists_binding
+    	};
     }
 
     class App extends SvelteComponentDev {
