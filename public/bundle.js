@@ -34,6 +34,12 @@ var app = (function () {
     function detach(node) {
         node.parentNode.removeChild(node);
     }
+    function destroy_each(iterations, detaching) {
+        for (let i = 0; i < iterations.length; i += 1) {
+            if (iterations[i])
+                iterations[i].d(detaching);
+        }
+    }
     function element(name) {
         return document.createElement(name);
     }
@@ -61,6 +67,14 @@ var app = (function () {
     let current_component;
     function set_current_component(component) {
         current_component = component;
+    }
+    function get_current_component() {
+        if (!current_component)
+            throw new Error(`Function called outside component initialization`);
+        return current_component;
+    }
+    function onMount(fn) {
+        get_current_component().$$.on_mount.push(fn);
     }
 
     const dirty_components = [];
@@ -298,25 +312,143 @@ var app = (function () {
 
     const file = "src/ArtistList.svelte";
 
-    function create_fragment(ctx) {
-    	var img, t0, h2, t1, t2, p, t3;
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = Object.create(ctx);
+    	child_ctx.name = list[i].name;
+    	child_ctx.src = list[i].src;
+    	child_ctx.reknown = list[i].reknown;
+    	return child_ctx;
+    }
+
+    // (30:6) {:else}
+    function create_else_block(ctx) {
+    	var p;
 
     	const block = {
     		c: function create() {
+    			p = element("p");
+    			p.textContent = "No data";
+    			attr_dev(p, "class", "svelte-19vrhdb");
+    			add_location(p, file, 30, 8, 668);
+    		},
+
+    		m: function mount(target, anchor) {
+    			insert_dev(target, p, anchor);
+    		},
+
+    		d: function destroy(detaching) {
+    			if (detaching) {
+    				detach_dev(p);
+    			}
+    		}
+    	};
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_else_block.name, type: "else", source: "(30:6) {:else}", ctx });
+    	return block;
+    }
+
+    // (20:6) {#each artists as { name, src, reknown }}
+    function create_each_block(ctx) {
+    	var div1, img, img_src_value, img_alt_value, t0, div0, h4, t1_value = ctx.name + "", t1, t2, p, t3_value = ctx.reknown + "", t3, t4;
+
+    	const block = {
+    		c: function create() {
+    			div1 = element("div");
     			img = element("img");
     			t0 = space();
-    			h2 = element("h2");
-    			t1 = text(name);
+    			div0 = element("div");
+    			h4 = element("h4");
+    			t1 = text(t1_value);
     			t2 = space();
     			p = element("p");
-    			t3 = text(reknown);
-    			attr_dev(img, "src", src);
-    			attr_dev(img, "alt", `Photo of ${name}`);
-    			add_location(img, file, 6, 0, 179);
-    			attr_dev(h2, "class", "artist-name mb-0 text-primary");
-    			add_location(h2, file, 7, 0, 218);
-    			attr_dev(p, "class", "artist-reknown text-muted mb-0");
-    			add_location(p, file, 8, 0, 272);
+    			t3 = text(t3_value);
+    			t4 = space();
+    			attr_dev(img, "class", "rounded mr-3 d-block svelte-19vrhdb");
+    			attr_dev(img, "src", img_src_value = ctx.src);
+    			attr_dev(img, "alt", img_alt_value = `Photo of ${ctx.name}`);
+    			add_location(img, file, 23, 10, 436);
+    			attr_dev(h4, "class", "mb-0 svelte-19vrhdb");
+    			add_location(h4, file, 25, 12, 532);
+    			attr_dev(p, "class", "text-muted mb-0 svelte-19vrhdb");
+    			add_location(p, file, 26, 12, 573);
+    			add_location(div0, file, 24, 10, 514);
+    			attr_dev(div1, "class", "list-group-item d-flex w-100 list-group-item-action\n          align-items-center");
+    			add_location(div1, file, 20, 8, 321);
+    		},
+
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div1, anchor);
+    			append_dev(div1, img);
+    			append_dev(div1, t0);
+    			append_dev(div1, div0);
+    			append_dev(div0, h4);
+    			append_dev(h4, t1);
+    			append_dev(div0, t2);
+    			append_dev(div0, p);
+    			append_dev(p, t3);
+    			append_dev(div1, t4);
+    		},
+
+    		p: function update(changed, ctx) {
+    			if ((changed.artists) && img_src_value !== (img_src_value = ctx.src)) {
+    				attr_dev(img, "src", img_src_value);
+    			}
+
+    			if ((changed.artists) && img_alt_value !== (img_alt_value = `Photo of ${ctx.name}`)) {
+    				attr_dev(img, "alt", img_alt_value);
+    			}
+
+    			if ((changed.artists) && t1_value !== (t1_value = ctx.name + "")) {
+    				set_data_dev(t1, t1_value);
+    			}
+
+    			if ((changed.artists) && t3_value !== (t3_value = ctx.reknown + "")) {
+    				set_data_dev(t3, t3_value);
+    			}
+    		},
+
+    		d: function destroy(detaching) {
+    			if (detaching) {
+    				detach_dev(div1);
+    			}
+    		}
+    	};
+    	dispatch_dev("SvelteRegisterBlock", { block, id: create_each_block.name, type: "each", source: "(20:6) {#each artists as { name, src, reknown }}", ctx });
+    	return block;
+    }
+
+    function create_fragment(ctx) {
+    	var div2, div1, div0;
+
+    	let each_value = ctx.artists;
+
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
+
+    	let each_1_else = null;
+
+    	if (!each_value.length) {
+    		each_1_else = create_else_block(ctx);
+    		each_1_else.c();
+    	}
+
+    	const block = {
+    		c: function create() {
+    			div2 = element("div");
+    			div1 = element("div");
+    			div0 = element("div");
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+    			attr_dev(div0, "class", "list-group");
+    			add_location(div0, file, 18, 4, 240);
+    			attr_dev(div1, "class", "col-11 col-md-7 col-lg-5");
+    			add_location(div1, file, 17, 2, 197);
+    			attr_dev(div2, "class", "row justify-content-center");
+    			add_location(div2, file, 16, 0, 154);
     		},
 
     		l: function claim(nodes) {
@@ -324,44 +456,113 @@ var app = (function () {
     		},
 
     		m: function mount(target, anchor) {
-    			insert_dev(target, img, anchor);
-    			insert_dev(target, t0, anchor);
-    			insert_dev(target, h2, anchor);
-    			append_dev(h2, t1);
-    			insert_dev(target, t2, anchor);
-    			insert_dev(target, p, anchor);
-    			append_dev(p, t3);
+    			insert_dev(target, div2, anchor);
+    			append_dev(div2, div1);
+    			append_dev(div1, div0);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(div0, null);
+    			}
+
+    			if (each_1_else) {
+    				each_1_else.m(div0, null);
+    			}
     		},
 
-    		p: noop,
+    		p: function update(changed, ctx) {
+    			if (changed.artists) {
+    				each_value = ctx.artists;
+
+    				let i;
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(changed, child_ctx);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(div0, null);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+    				each_blocks.length = each_value.length;
+    			}
+
+    			if (each_value.length) {
+    				if (each_1_else) {
+    					each_1_else.d(1);
+    					each_1_else = null;
+    				}
+    			} else if (!each_1_else) {
+    				each_1_else = create_else_block(ctx);
+    				each_1_else.c();
+    				each_1_else.m(div0, null);
+    			}
+    		},
+
     		i: noop,
     		o: noop,
 
     		d: function destroy(detaching) {
     			if (detaching) {
-    				detach_dev(img);
-    				detach_dev(t0);
-    				detach_dev(h2);
-    				detach_dev(t2);
-    				detach_dev(p);
+    				detach_dev(div2);
     			}
+
+    			destroy_each(each_blocks, detaching);
+
+    			if (each_1_else) each_1_else.d();
     		}
     	};
     	dispatch_dev("SvelteRegisterBlock", { block, id: create_fragment.name, type: "component", source: "", ctx });
     	return block;
     }
 
-    let name = "Barot Bellingham";
+    function instance($$self, $$props, $$invalidate) {
+    	let { artists } = $$props;
 
-    let src = "https://lil-cdn.com/2824055/Barot_Bellingham_tn.jpg";
+    	const writable_props = ['artists'];
+    	Object.keys($$props).forEach(key => {
+    		if (!writable_props.includes(key) && !key.startsWith('$$')) console.warn(`<ArtistList> was created with unknown prop '${key}'`);
+    	});
 
-    let reknown = "Royal Academy of Painting and Sculpture";
+    	$$self.$set = $$props => {
+    		if ('artists' in $$props) $$invalidate('artists', artists = $$props.artists);
+    	};
+
+    	$$self.$capture_state = () => {
+    		return { artists };
+    	};
+
+    	$$self.$inject_state = $$props => {
+    		if ('artists' in $$props) $$invalidate('artists', artists = $$props.artists);
+    	};
+
+    	return { artists };
+    }
 
     class ArtistList extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, null, create_fragment, safe_not_equal, []);
+    		init(this, options, instance, create_fragment, safe_not_equal, ["artists"]);
     		dispatch_dev("SvelteRegisterComponent", { component: this, tagName: "ArtistList", options, id: create_fragment.name });
+
+    		const { ctx } = this.$$;
+    		const props = options.props || {};
+    		if (ctx.artists === undefined && !('artists' in props)) {
+    			console.warn("<ArtistList> was created without expected prop 'artists'");
+    		}
+    	}
+
+    	get artists() {
+    		throw new Error("<ArtistList>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set artists(value) {
+    		throw new Error("<ArtistList>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
     }
 
@@ -415,7 +616,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance($$self, $$props, $$invalidate) {
+    function instance$1($$self, $$props, $$invalidate) {
     	let { searchTerm } = $$props;
 
     	const writable_props = ['searchTerm'];
@@ -441,7 +642,7 @@ var app = (function () {
     class ArtistSearch extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance, create_fragment$1, safe_not_equal, ["searchTerm"]);
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, ["searchTerm"]);
     		dispatch_dev("SvelteRegisterComponent", { component: this, tagName: "ArtistSearch", options, id: create_fragment$1.name });
 
     		const { ctx } = this.$$;
@@ -472,7 +673,10 @@ var app = (function () {
     		$$inline: true
     	});
 
-    	var artistlist = new ArtistList({ $$inline: true });
+    	var artistlist = new ArtistList({
+    		props: { artists: ctx.artists },
+    		$$inline: true
+    	});
 
     	const block = {
     		c: function create() {
@@ -481,7 +685,7 @@ var app = (function () {
     			t = space();
     			artistlist.$$.fragment.c();
     			attr_dev(div, "class", "container");
-    			add_location(div, file$2, 7152, 0, 216383);
+    			add_location(div, file$2, 7160, 0, 216541);
     		},
 
     		l: function claim(nodes) {
@@ -496,7 +700,11 @@ var app = (function () {
     			current = true;
     		},
 
-    		p: noop,
+    		p: function update(changed, ctx) {
+    			var artistlist_changes = {};
+    			if (changed.artists) artistlist_changes.artists = ctx.artists;
+    			artistlist.$set(artistlist_changes);
+    		},
 
     		i: function intro(local) {
     			if (current) return;
@@ -529,10 +737,31 @@ var app = (function () {
 
     let searchTerm = "Barot Bellingham";
 
+    function instance$2($$self, $$props, $$invalidate) {
+    	
+      let artists = [];
+
+      onMount( async() => {
+    	  const res = await fetch(`data.json`);
+    	  $$invalidate('artists', artists = await res.json());
+      });
+
+    	$$self.$capture_state = () => {
+    		return {};
+    	};
+
+    	$$self.$inject_state = $$props => {
+    		if ('searchTerm' in $$props) $$invalidate('searchTerm', searchTerm = $$props.searchTerm);
+    		if ('artists' in $$props) $$invalidate('artists', artists = $$props.artists);
+    	};
+
+    	return { artists };
+    }
+
     class App extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, null, create_fragment$2, safe_not_equal, []);
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, []);
     		dispatch_dev("SvelteRegisterComponent", { component: this, tagName: "App", options, id: create_fragment$2.name });
     	}
     }
